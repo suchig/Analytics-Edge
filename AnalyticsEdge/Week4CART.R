@@ -1,0 +1,151 @@
+stevens=read.csv("stevens.csv")
+str(stevens)
+library(caTools)
+set.seed(3000)
+split=sample.split(stevens$Reverse,SplitRatio=0.7)
+stevensTrain=subset(stevens,split==TRUE)
+stevensTest=subset(stevens,split==FALSE)
+library(rpart)
+library(rpart.plot)
+stevensTree = rpart(Reverse ~ Circuit+Issue+Petitioner+Respondent+LowerCourt+Unconst, data=stevensTrain,method="class",minbucket=25)
+prp(stevensTree)
+predictCART = predict(stevensTree,newdata=stevensTest,type="class")
+table(stevensTest$Reverse,predictCART)
+predictROC = predict(stevensTree,newdata=stevensTest)
+predictROC
+predictAUC = prediction(predictROC[,2],stevensTest$Reverse)
+performanceAUC = performance(predictAUC,"tpr","fpr")
+plot(performanceAUC)
+auc=performance(predictAUC,"auc")
+
+stevensTreeSmall = rpart(Reverse ~ Circuit+Issue+Petitioner+Respondent+LowerCourt+Unconst, data=stevensTrain,method="class",minbucket=5)
+prp(stevensTreeSmall)
+
+stevensTreeBig = rpart(Reverse ~ Circuit+Issue+Petitioner+Respondent+LowerCourt+Unconst, data=stevensTrain,method="class",minbucket=100)
+prp(stevensTreeBig)
+
+###############
+library(randomForest)
+stevensTrain$Reverse=as.factor(stevensTrain$Reverse)
+stevensTest$Reverse=as.factor(stevensTest$Reverse)
+stevensForest=randomForest(Reverse ~ Circuit+Issue+Petitioner+Respondent+LowerCourt+Unconst, data=stevensTrain,nodesize=25,ntree=200)
+predictForest = predict(stevensForest,newdata=stevensTest)
+table(stevensTest$Reverse,predictForest)
+
+set.seed(100)
+stevensForestNew=randomForest(Reverse ~ Circuit+Issue+Petitioner+Respondent+LowerCourt+Unconst, data=stevensTrain,nodesize=25,ntree=200)
+predictForestNew = predict(stevensForestNew,newdata=stevensTest)
+table(stevensTest$Reverse,predictForestNew)
+
+set.seed(200)
+stevensForestNew2=randomForest(Reverse ~ Circuit+Issue+Petitioner+Respondent+LowerCourt+Unconst, data=stevensTrain,nodesize=25,ntree=200)
+predictForestNew2 = predict(stevensForestNew2,newdata=stevensTest)
+table(stevensTest$Reverse,predictForestNew2)
+#################
+library(caret)
+library(e1071)
+numFolds=trainControl(method="cv", number=10)
+cpGrid=expand.grid(.cp=seq(0.01,0.5,0.01))
+train(Reverse ~ Circuit+Issue+Petitioner+Respondent+LowerCourt+Unconst,data=stevensTrain, method="rpart", trControl=numFolds, tuneGrid=cpGrid)
+stevensTreeCV=rpart(Reverse ~ Circuit+Issue+Petitioner+Respondent+LowerCourt+Unconst, data=stevensTrain,method="class",cp=0.19)
+predictTrainCV=predict(stevensTreeCV,newdata=stevensTest,type="class")
+table(stevensTest$Reverse,predictTrainCV)
+(59+64)/(59+18+29+64)
+
+prp(stevensTreeCV)
+###############
+Claims=read.csv("ClaimsData.csv")
+table(Claims$bucket2009)/nrow(Claims)
+library(caTools)
+set.seed(88)
+split=sample.split(Claims$bucket2009,SplitRatio=0.6)
+ClaimsTrain=subset(Claims,split==TRUE)
+ClaimsTest=subset(Claims,split==FALSE)
+
+summary(ClaimsTrain)
+table(ClaimsTrain$diabetes)
+
+ClassMatrix=as.matrix(table(ClaimsTest$bucket2009, ClaimsTest$bucket2008))
+(110138+10721+2774+1539+104)/183202
+PenaltyMatrix=matrix(c(0,1,2,3,4,2,0,1,2,3,4,2,0,1,2,6,4,2,0,1,8,6,4,2,0),byrow=TRUE,nrow=5)
+sum(ClassMatrix*PenaltyMatrix)/nrow(ClaimsTest)
+
+table(Claims$bucket2008)
+table(ClaimsTest$bucket2009)
+PenaltyMatrixTest=matrix(c(0,2,4,6,8),byrow=TRUE,nrow=1)
+
+ClaimsTree = rpart(bucket2009 ~ .-reimbursement2009, data=ClaimsTrain,method="class", cp=0.00005)
+prp(ClaimsTree)
+PredictTest = predict(ClaimsTree, newdata=ClaimsTest, type="class")
+table(ClaimsTest$bucket2009, PredictTest)
+PenaltyMatrix*as.matrix(table(ClaimsTest$bucket2009, PredictTest))
+sum(PenaltyMatrix*as.matrix(table(ClaimsTest$bucket2009, PredictTest)))/nrow(ClaimsTest)
+ClaimsTree = rpart(bucket2009 ~ .-reimbursement2009, data=ClaimsTrain,method="class", cp=0.00005,parms=list(loss=PenaltyMatrix))
+PredictTest = predict(ClaimsTree, newdata=ClaimsTest, type="class")
+table(ClaimsTest$bucket2009, PredictTest)
+PenaltyMatrix*as.matrix(table(ClaimsTest$bucket2009, PredictTest))
+sum(PenaltyMatrix*as.matrix(table(ClaimsTest$bucket2009, PredictTest)))/nrow(ClaimsTest)
+
+########################
+#Recitation
+boston=read.csv("boston.csv")
+str(boston)
+
+plot(boston$LON, boston$LAT)
+
+points(boston$LON[boston$CHAS==1],boston$LAT[boston$CHAS==1],col="blue",pch=19)
+points(boston$LON[boston$TRACT==3531],boston$LAN[boston$TRACT==3531],col="red",pch=19)
+points(boston$LON[boston$TRACT==3531],boston$LAT[boston$TRACT==3531],col="red",pch=19)
+
+summary(boston$NOX)
+points(boston$LON[boston$NOX>=0.55],boston$LAT[boston$NOX>=0.55],col="green",pch=19)
+summary(boston$MEDV)
+points(boston$LON[boston$MEDV>=21.2],boston$LAT[boston$MEDV>=21.2],col="red",pch=19)
+
+plot(boston$LAT,boston$MEDV)
+plot(boston$LON,boston$MEDV)
+latlonlm=lm(MEDV~LAT+LON,data=boston)
+summary(latlonlm)
+plot(boston$LON,boston$LAT)
+points(boston$LON[boston$MEDV>=21.2],boston$LAT[boston$MEDV>=21.2],col="red",pch=19)
+points(boston$LON[latlonlm$fitted.values>=21.2],boston$LAT[latlonlm$fitted.values>=21.2],col="blue",pch="$")
+
+latlontree=rpart(MEDV~LAT+LON,data=boston)
+prp(latlontree)
+plot(boston$LON,boston$LAT)
+points(boston$LON[boston$MEDV>=21.2],boston$LAT[boston$MEDV>=21.2],col="red",pch=19)
+fittedvalues=predict(latlontree)
+points(boston$LON[fittedvalues>=21.2],boston$LAT[fittedvalues>=21.2],col="blue",pch="$")
+latlontree=rpart(MEDV~LAT+LON,data=boston, minbucket=50)
+plot(latlontree)
+text(latlontree)
+plot(boston$LON,boston$LAT)
+abline(v=-71.07)
+abline(h=42.21)
+abline(h=42.17)
+points(boston$LON[boston$MEDV>=21.2],boston$LAT[boston$MEDV>=21.2],col="red",pch=19)
+
+set.seed(123)
+split=sample.split(boston$MEDV,SplitRatio=0.7)
+train=subset(boston, split==TRUE)
+test=subset(boston, split==FALSE)
+linreg=lm(MEDV~LON+LAT+CRIM+ZN+INDUS+CHAS+NOX+RM+AGE+DIS+RAD+TAX+PTRATIO,data=train)
+summary(linreg)
+linreg.pred=predict(linreg,newdata=test)
+linreg.sse=sum((linreg.pred-test$MEDV)^2)
+linreg.sse
+tree=rpart(MEDV~LON+LAT+CRIM+ZN+INDUS+CHAS+NOX+RM+AGE+DIS+RAD+TAX+PTRATIO,data=train)
+prp(tree)
+tree.pred=predict(tree,newdata=test)
+tree.sse=sum((tree.pred-test$MEDV)^2)
+tree.sse
+
+set.seed(123)
+tr.control=trainControl(method="cv",number=10)
+cp.grid=expand.grid(.cp = (0:10)*0.001)
+tr=train(MEDV~LON+LAT+CRIM+ZN+INDUS+CHAS+NOX+RM+AGE+DIS+RAD+TAX+PTRATIO, data=train,method="rpart",trControl=tr.control,tuneGrid=cp.grid)
+best.tree=tr$finalModel
+prp(best.tree)
+best.tree.pred=predict(best.tree,newdata=test)
+best.tree.sse=sum((best.tree.pred-test$MEDV)^2)
+best.tree.sse
