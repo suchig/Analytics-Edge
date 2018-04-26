@@ -8,8 +8,8 @@ library(e1071)
 library(randomForest)
 library(dplyr)
 
-titanicTrain=read.csv("TitanicTrain.csv")
-titanicTest=read.csv("TitanicTest.csv")
+titanicTrain=read.csv("../input/train.csv")
+titanicTest=read.csv("../input/test.csv")
 titanic = bind_rows(titanicTrain,titanicTest)
 
 titanic$Title = str_extract(titanic$Name,"[A-Z][a-z]+\\.")
@@ -63,16 +63,20 @@ titanic$CabinInt[substr(titanic$Cabin,1,1)=="F"]=6
 titanic$CabinInt[substr(titanic$Cabin,1,1)=="G"]=7
 titanic$CabinInt[substr(titanic$Cabin,1,1)=="T"]=8
 
+titanic$CabinInt[is.na(titanic$Cabin)]=0
+titanic$CabinInt[is.na(titanic$Cabin)==FALSE]=1
+
+
 #titanic$Age[is.na(titanic$Age) & titanic$Title=="Mr."]=mean(titanic$Age[titanic$Title=="Mr."],na.rm=TRUE)
 #titanic$Age[is.na(titanic$Age) & titanic$Title=="Mrs."]=mean(titanic$Age[titanic$Title=="Mrs."],na.rm=TRUE)
 #titanic$Age[is.na(titanic$Age) & titanic$Title=="Miss."]=mean(titanic$Age[titanic$Title=="Miss."],na.rm=TRUE)
 #titanic$Age[is.na(titanic$Age) & titanic$Title=="Master."]=mean(titanic$Age[titanic$Title=="Master."],na.rm=TRUE)
 #titanic$Age[is.na(titanic$Age) & titanic$Title=="Rare."]=mean(titanic$Age[titanic$Title=="Rare."],na.rm=TRUE)
 #Age and Deck manipulation
-imputed=mice(titanic[c("Sex","Age","Titleint","Pclass","FamilySize","Embarked","CabinInt")])
+imputed=mice(titanic[c("Sex","Age","Titleint","Pclass","FamilySize","Embarked")])
 completed=complete(imputed)
 titanic$Age=completed$Age
-titanic$CabinInt=completed$CabinInt
+#titanic$CabinInt=completed$CabinInt
 
 titanic$AgeRange[titanic$Age<=16]=0
 titanic$AgeRange[titanic$Age>16.1 & titanic$Age<=32.1]=1
@@ -89,13 +93,13 @@ titanicTrainSplit1 = subset(titanicTrain,split==TRUE)
 titanicTrainSplit2 = subset(titanicTrain,split==FALSE)
 
 set.seed(123)
-titanicSplitModel = randomForest(factor(Survived) ~ Pclass+Sex+AgeRange+Embarked+Titleint+FamilySizeD+FareInd,data=titanicTrainSplit1)
+titanicSplitModel = randomForest(factor(Survived) ~ Pclass+Sex+AgeRange+Embarked+Titleint+FamilySizeD+FareInd+CabinInt,data=titanicTrainSplit1)
 predictTitanicSplit = predict(titanicSplitModel,newdata=titanicTrainSplit2)
 
 table(titanicTrainSplit2$Survived,predictTitanicSplit)
 
 set.seed(123)
-titanicModel = randomForest(factor(Survived) ~ Pclass+Sex+AgeRange+Embarked+Titleint+FamilySizeD+FareInd,data=titanicTrain)
+titanicModel = randomForest(factor(Survived) ~ Pclass+Sex+AgeRange+Embarked+Titleint+FamilySizeD+FareInd+CabinInt,data=titanicTrain)
 predictTitanic = predict(titanicModel,newdata=titanicTest)
 
 table(predictTitanic)
